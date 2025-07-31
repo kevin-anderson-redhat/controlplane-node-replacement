@@ -5,7 +5,7 @@
 The following procedure describes replacing an OpenShift Container Platform (OCP) ControlPlane node that has failed and is powered off.
 This procedure assumes that the ControlPlane was originally deployed
 using the Agent Installation procedure without providing BMC credentials in the agent config yaml.
-In the method of installation the generated Agent ISO would have been used to boot the control plane nodes thru BMC attached virtual media,
+For clarity, the installation the OCP cluster required that each node booted the generated Agent Installer ISO thru BMC (iLO or iDRAC) attached virtual media,
 network boot, or temporarily attached drives (e.g., USB thumb drive).
 
 == Prerequisites
