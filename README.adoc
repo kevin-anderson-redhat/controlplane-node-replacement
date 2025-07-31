@@ -188,6 +188,7 @@ Open a new terminal window to edit and delete the finalizer fields.
 ```
 watch oc get clusteroperators
 ```
+
 === Create a New BareMetalHost
 
 . Use the following to create a new BareMetalHost after correcting the `metadata.name` and the `spec.bootMACAddress`
