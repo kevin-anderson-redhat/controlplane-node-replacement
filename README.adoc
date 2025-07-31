@@ -352,6 +352,12 @@ EOF
 <3> replace `new-controlplane-machine` with the name of the machine to be created.  This be similar to the names shown in the previous step.
 <4> put the name of the new baremetal host here
 <5> put the uid of the new baremetal host here
++
+.. The following warning is expected:
++
+```
+Warning: metadata.finalizers: "machine.machine.openshift.io": prefer a domain-qualified finalizer name to avoid accidental conflicts with other finalizer writers
+```
 
 . Link the new ControlPlane Node and Machine to the BareMetalHost
 (adjust the machine object name as required)
