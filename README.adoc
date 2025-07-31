@@ -221,6 +221,11 @@ spec:
     namespace: openshift-machine-api
 EOF
 ```
+.. The following warning is expected upon creation of the BareMetalHost
++
+```
+Warning: metadata.finalizers: "baremetalhost.metal3.io": prefer a domain-qualified finalizer name to avoid accidental conflicts with other finalizer writers
+```
 
 === Create New ControlPlane Node
 
