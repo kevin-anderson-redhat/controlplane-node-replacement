@@ -336,15 +336,15 @@ spec:
   metadata: {}
   providerID:  <4>
   providerSpec:
-  value:
-    apiVersion: baremetal.cluster.k8s.io/v1alpha1
-    hostSelector: {}
-    image:
-      checksum: ""
-      url: ""
-    kind: BareMetalMachineProviderSpec
-    userData:
-    name: master-user-data-managed
+    value:
+      apiVersion: baremetal.cluster.k8s.io/v1alpha1
+      hostSelector: {}
+      image:
+        checksum: ""
+        url: ""
+      kind: BareMetalMachineProviderSpec
+      userData:
+        name: master-user-data-managed
 EOF
 ```
 <1> replace new-cp-2 with the name of the new BareMetalHost created for the new node
