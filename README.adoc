@@ -463,6 +463,7 @@ oc  patch machines new-controlplane-machine \
 '  }'\
 ']'
 ```
+
 === Add The New Etcd Member
 
 . Add the new contrlplane etcd member
