@@ -273,6 +273,7 @@ routes:
 ```
 +
 NOTE: The failed node's networkConfig section in the agent-config.yaml from the original cluster deployment can be used as a starting point for the new controlplane node's nmstate file.
+The following illustrates extraction of that section for the first control plane node.
 +
 ```
 cat agent-config-iso.yaml | yq .hosts[0].networkConfig > new_controlplane_nmstate.yaml
