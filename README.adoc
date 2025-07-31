@@ -476,19 +476,10 @@ exit
 ```
 
 . Force etcd redeployment
+.. This is taken from step 5 of https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/backup_and_restore/control-plane-backup-and-restore#restore-replace-crashlooping-etcd-member_replacing-unhealthy-etcd-member[6.2.4.2. Replacing an unhealthy etcd member whose etcd pod is crashlooping]
 +
 ```
-oc patch etcd cluster \
-   --type=merge \
-   -p \
-'{'\
-'  "spec":'\
-'    {'\
-'       "forceRedeploymentReason": '\
-'       "single-master-recovery-'$( date --rfc-3339=ns )'"'\
-'    }'\
-'}'
-   
+oc patch etcd/cluster --type=merge -p '{"spec": {"unsupportedConfigOverrides": null}}'
 ```
 
 . Turn the quorum guard back on
