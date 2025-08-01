@@ -23,11 +23,21 @@ network boot, or temporarily attached drives (e.g., USB thumb drive).
 You must take an etcd backup before performing this procedure so that your cluster can be restored if you encounter any issues.
 ====
 
+For this type of installation there will be no machineset for the control plane.
+Run the following command to look for machine sets.
+
+```
+oc get machinesets -n openshift-machine-api
+```
+
+There should only be one or more machinesets for the workers. 
+If a machine set exists for the control plane, do not use the following procedure.
+
 == Procedure
 
-=== Remove The Failed ControlPlane Node's Etcd Member
+=== Remove the unhealthy member <<ocp>>
 
-. Choose an etcd pod that is not on the failed node using the following command:
+. Choose an etcd pod that is not on the affected node using the following command:
 +
 ```
 oc -n openshift-etcd get pods -l k8s-app=etcd -o wide
@@ -48,13 +58,13 @@ etcdctl member list -w table
 .. Example output
 +
 ```
-+------------------+---------+--------------------+---------------------------+---------------------------+-----------------------+
-| ID               | STATUS  | NAME                      | PEER ADDRS                  | CLIENT ADDRS                | IS LEARNER |
-+------------------+---------+--------------------+---------------------------+---------------------------+-----------------------+
-| 7a8197040a5126c8 | started | openshift-control-plane-2 | https://192.168.20.11:2380/ | https://192.168.10.11:2379/ | false      |
-| 8d5abe9669a39192 | started | openshift-control-plane-1 | https://192.168.20.10:2380/ | https://192.168.10.10:2379/ | false      |
-| cc3830a72fc357f9 | started | openshift-control-plane-0 | https://192.168.20.19:2380/ | https://192.168.10.19:2379/ | false      |
-+------------------+---------+--------------------+---------------------------+---------------------------+-----------------------+
++------------------+---------+------------------------------+---------------------------+---------------------------+
+|        ID        | STATUS  |             NAME             |        PEER ADDRS         |       CLIENT ADDRS        |
++------------------+---------+------------------------------+---------------------------+---------------------------+
+| 6fc1e7c9db35841d | started | ip-10-0-131-183.ec2.internal | https://10.0.131.183:2380 | https://10.0.131.183:2379 |
+| 757b6793e2408b6c | started | ip-10-0-164-97.ec2.internal  | https://10.0.164.97:2380  | https://10.0.164.97:2379  |
+| ca8c2990a0aa29d1 | started | ip-10-0-154-204.ec2.internal | https://10.0.154.204:2380 | https://10.0.154.204:2379 |
++------------------+---------+------------------------------+---------------------------+---------------------------+
 ```
 
 .. Take note of the ID and the name of the unhealthy etcd member, because these values are required later in the procedure. The etcdctl endpoint health command will list the removed member until the replacement procedure is completed and the new member is added.
@@ -79,66 +89,94 @@ etcdctl member list -w table
 .. Example output
 +
 ```
-+------------------+---------+--------------------+---------------------------+---------------------------+-------------------------+
-| ID               | STATUS  | NAME                      | PEER ADDRS                  | CLIENT ADDRS                | IS LEARNER |
-+------------------+---------+--------------------+---------------------------+---------------------------+-------------------------+
-| cc3830a72fc357f9 | started | openshift-control-plane-2 | https://192.168.10.11:2380/ | https://192.168.10.11:2379/ | false |
-| 8d5abe9669a39192 | started | openshift-control-plane-1 | https://192.168.10.10:2380/ | https://192.168.10.10:2379/ | false |
-+------------------+---------+--------------------+---------------------------+---------------------------+-------------------------+
++------------------+---------+------------------------------+---------------------------+---------------------------+
+|        ID        | STATUS  |             NAME             |        PEER ADDRS         |       CLIENT ADDRS        |
++------------------+---------+------------------------------+---------------------------+---------------------------+
+| 757b6793e2408b6c | started |  ip-10-0-164-97.ec2.internal |  https://10.0.164.97:2380 |  https://10.0.164.97:2379 |
+| ca8c2990a0aa29d1 | started | ip-10-0-154-204.ec2.internal | https://10.0.154.204:2380 | https://10.0.154.204:2379 |
++------------------+---------+------------------------------+---------------------------+---------------------------+
 ```
 
 IMPORTANT: After you remove the member, the cluster might be unreachable for a short time while the remaining etcd instances reboot.
 
-=== Turn off etcd quorum guard
+=== Turn off etcd quorum guard <<ocp>>
 
-. Enter the following command to turn of the etcd quorum guard:
+. Run the following command to turn of the etcd quorum guard:
 +
 ```
-oc patch etcd/cluster \
-  --type=merge \
-  -p \
-'{'\
-'  "spec": {'\
-'    "unsupportedConfigOverrides": {'\
-'      "useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true'\
-'    }'\
-'  }'\
-'}'
-
+oc patch etcd/cluster --type=merge -p '{"spec": {"unsupportedConfigOverrides": {"useUnsupportedUnsafeNonHANonProductionUnstableEtcd": true}}}'
 ```
 
-=== Remove Failed Node secrets
+NOTE: The refrenced OpenShift documentation <<ocp>> includes a step to delete the node.  However, as noted later in the documentation, 
+removing the bmh and machine will cause the operator to remove the node.
+
+//
+// === Delete the affected node <<ocp>>
+//
+// . Run the following command to delete the affected node
+// +
+// ```
+// oc delete node <node_name> <1>
+// ```
+// <1> replace `<node_name>` with the name of the failed/off node
+
+=== Delete affected node secrets <<ocp>>
 
 . List the secrets for the unhealthy etcd member that was removed.
-
-. The following command identifies the powered off control plane node (which should show as NotReady)
-and shows the secrets associated with the failed node.
 +
 ```
-FAILED_NODE=$(oc get nodes -l node-role.kubernetes.io/control-plane | grep NotReady | awk '{print $1}')
-oc get secrets -n openshift-etcd | grep $FAILED_NODE
+oc get secrets -n openshift-etcd | grep <node_name> <1>
 ```
+<1> replace `<node_name>` with the name of the failed/off node (deleted in previous step)
 
-. There should be three secrets associated with the failed node whose names start with the following
+. There should be three secrets associated with the affected node whose names start with the following
 ** etcd-peer-
 ** etcd-serving-metrics-
 ** etcd-serving-
 
-. Delete the secrets associated with the failed node,
+. Delete the secrets associated with the affected node that was removed.
 
+.. Delete the peer secret:
++
 ```
-FAILED_NODE=$(oc get nodes -l node-role.kubernetes.io/control-plane | \
-              grep NotReady | \
-              awk '{print $1}'\
-             )
+oc delete secret -n openshift-etcd etcd-peer-<node_name>  <1>
+```
+<1> replace `<node_name>` with the name of the affected node
 
-oc get secrets -n openshift-etcd  --no-headers | \
-   grep $FAILED_NODE | \
-   awk '{print $1}' | \
-   xargs oc delete secrets -n openshift-etcd
+
+.. Delete the serving secret:
++
+```
+oc delete secret -n openshift-etcd etcd-serving-<node_name>  <1>
+```
+<1> replace `<node_name>` with the name of the affected node
+
+
+.. Delete the metrics secret:
+```
+oc delete secret -n openshift-etcd etcd-serving-metrics-<node_name>  <1>
+<1> replace `<node_name>` with the name of the affected node
 ```
 
-=== Delete BareMetalHost and Machine
+NOTE: For this type of installation there should be no ControlPlane machine set
+
+=== Obtain the machine for the affected node
+
+. Runn the following ommand to identify the machine associated with the affected node
++
+```
+oc get machines -n openshift-machine-api -o wide
+```
+** Example Output
++
+```
+NAME                              PHASE     TYPE   REGION   ZONE   AGE     NODE                               PROVIDERID                                                                                              STATE
+examplecluster-control-plane-0    Running                          3h11m   openshift-control-plane-0   baremetalhost:///openshift-machine-api/openshift-control-plane-0/da1ebe11-3ff2-41c5-b099-0aa41222964e   externally provisioned 
+examplecluster-control-plane-1    Running                          3h11m   openshift-control-plane-1   baremetalhost:///openshift-machine-api/openshift-control-plane-1/d9f9acbc-329c-475e-8d81-03b20280a3e1   externally provisioned
+examplecluster-control-plane-2    Running                          3h11m   openshift-control-plane-2   baremetalhost:///openshift-machine-api/openshift-control-plane-2/3354bdac-61d8-410f-be5b-6a395b056135   externally provisioned
+examplecluster-compute-0          Running                          165m    openshift-compute-0         baremetalhost:///openshift-machine-api/openshift-compute-0/3d685b81-7410-4bb3-80ec-13a31858241f         provisioned
+examplecluster-compute-1          Running                          165m    openshift-compute-1         baremetalhost:///openshift-machine-api/openshift-compute-1/0fdae6eb-2066-4241-91dc-e7ea72ab13b9         provisioned
+```
 
 . Ensure that the Bare Metal Operator is available by running the following command:
 +
@@ -153,26 +191,28 @@ NAME        VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
 baremetal   4.18.0    True        False         False      3d15h
 ```
 
-. Remove the old BareMetalHost object by running the following command:
+. Save the affected BareMetalHost object to a file for later use by running the following command
 +
 ```
-oc delete bmh openshift-control-plane-2 -n openshift-machine-api
+oc get -n openshift-machine-api bmh <node_name>  >bmh_affected.yaml <1>
 ```
+<1> replace `<node_name>` with the name of the affected node (which normally matches the associate bmh name).
+
+. Remove the affected BareMetalHost object by running the following command
 +
-Example output
-+
 ```
-baremetalhost.metal3.io "openshift-control-plane-2" deleted
+oc delete -n openshift-machine-api bmh <node_name>  <1>
 ```
+<1> replace `<node_name>` with the name of the affected node (which normally matches the associate bmh name).
 
 . Delete the machine of the unhealthy member by running the following command:
 +
 ```
-oc delete machine -n openshift-machine-api examplecluster-control-plane-2
+oc delete machine -n openshift-machine-api <machine_name> <1>
 ```
+<1> replace <machine_name> with the machine name found previously to be associated with the affected node.
 
-. After you remove the BareMetalHost and Machine objects,
-then the Machine controller automatically deletes the Node object.
+NOTE: After you remove the BareMetalHost and Machine objects, the Machine controller automatically deletes the Node object.
 
 .. If deletion of the machine is delayed for any reason or the command is obstructed and delayed, you can force deletion by removing the machine object finalizer field.
 
@@ -189,37 +229,38 @@ Open a new terminal window to edit and delete the finalizer fields.
 watch oc get clusteroperators
 ```
 
-=== Create a New BareMetalHost
+=== Create a new BareMetalHost
 
-. Use the following to create a new BareMetalHost after correcting the `metadata.name` and the `spec.bootMACAddress`
+. Edit the saved bmh_affected.yaml file from the earlier step
+.. Remove the following metadata items
+... creationTimestamp
+... generation
+... resourceVersion
+... uid
+.. Remove the status section
+.. The resulting file should resemble the following
 +
 ```
-cat <<EOF | oc apply -f -
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
-  name: new-control-plane
+  name: openshift-control-plane-2
   namespace: openshift-machine-api
-  finalizers:
-    - baremetalhost.metal3.io
-  labels:
-    installer.openshift.io/role: control-plane
 spec:
   automatedCleaningMode: disabled
   bmc:
-    address: ""
-    credentialsName: ""
+    address:
+    credentialsName:
     disableCertificateVerification: true
-  bootMACAddress: ab:cd:ef:00:01:02
+  bootMACAddress: 48:df:37:b0:8a:a0
   bootMode: UEFI
-  externallyProvisioned: false
+  externallyProvisioned: true
   online: true
   rootDeviceHints:
-    deviceName: /dev/disk/by-path/pci-0000:04:00.0-nvme-1
+    deviceName: /dev/disk/by-id/scsi-<serial_number>
   userData:
     name: master-user-data-managed
     namespace: openshift-machine-api
-EOF
 ```
 .. The following warning is expected upon creation of the BareMetalHost
 +
@@ -289,7 +330,7 @@ coreos-installer iso customize rhcos-live.86_64.iso \
 -f
 ```
 
-. Boot the new controlplane node with the customized Red Hat CoreOS live ISO.
+. Boot the new ControlPlane node with the customized Red Hat CoreOS live ISO.
 
 . Approve the Certificate Signing Requests (CSR) to join the new node to the cluster.
 
@@ -466,6 +507,24 @@ oc  patch machines new-controlplane-machine \
 
 === Add The New Etcd Member
 
+. Choose an etcd pod from those returned by the following command:
++
+```
+oc -n openshift-etcd get pods -l k8s-app=etcd -o wide
+```
+
+. Connect to the running etcd container, passing in the name of a pod that is not on the failed node:
++
+```
+oc rsh -n openshift-etcd etcd-old-controlplane-1
+```
+
+. View the member list:
++
+```
+etcdctl member list -w table
+```
+
 . Add the new contrlplane etcd member
 +
 ```
@@ -476,11 +535,11 @@ exit
 ```
 
 . Force etcd redeployment
-.. This is taken from step 5 of https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/backup_and_restore/control-plane-backup-and-restore#restore-replace-crashlooping-etcd-member_replacing-unhealthy-etcd-member[6.2.4.2. Replacing an unhealthy etcd member whose etcd pod is crashlooping]
 +
 ```
 oc patch etcd/cluster --type=merge -p '{"spec": {"unsupportedConfigOverrides": null}}'
 ```
+.. This is taken from step 5 of https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/backup_and_restore/control-plane-backup-and-restore#restore-replace-crashlooping-etcd-member_replacing-unhealthy-etcd-member[6.2.4.2. Replacing an unhealthy etcd member whose etcd pod is crashlooping]
 
 . Turn the quorum guard back on
 +
@@ -492,5 +551,6 @@ oc patch etcd/cluster --type=merge -p '{"spec": {"unsupportedConfigOverrides": n
 [bibliography]
 == References
 * [[[ocp]]] Red Hat OpenShift Container Platform Documentation - Configure - Backup and Restore - 
-https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/backup_and_restore/control-plane-backup-and-restore#restore-replace-stopped-baremetal-etcd-member_replacing-unhealthy-etcd-member
+https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/backup_and_restore/control-plane-backup-and-restore#restore-replace-stopped-baremetal-etcd-member_replacing-unhealthy-etcd-member
 * [[[bmh]]] *BareMetalHost reference is missing after adding a host to Openshift Assisted Installer cluster* https://access.redhat.com/solutions/6471021
+* [[[rig]]] *How to retrieve Master or Worker Ignition Configuration from OpenShift Container Platform 4?* https://access.redhat.com/solutions/5504291
