@@ -398,18 +398,18 @@ apiVersion: machine.openshift.io/v1beta1
 kind: Machine
 metadata:
   annotations:
-    metal3.io/BareMetalHost: openshift-machine-api/new-cp-2  <1>
+    metal3.io/BareMetalHost: openshift-machine-api/new-controleplane-machine  <1>
   finalizers:
     - machine.machine.openshift.io
   labels:
-    machine.openshift.io/cluster-api-cluster: bmtest-extpr <2>
+    machine.openshift.io/cluster-api-cluster: bmtest-extpr-master-2 <2>
     machine.openshift.io/cluster-api-machine-role: master
     machine.openshift.io/cluster-api-machine-type: master
-  name: new-controlplane-machine <3>
+  name: new-controlplane-machine <1>
   namespace: openshift-machine-api
 spec:
   metadata: {}
-  providerID:  <4>
+  providerID:  <3>
   providerSpec:
     value:
       apiVersion: baremetal.cluster.k8s.io/v1alpha1
@@ -421,10 +421,9 @@ spec:
       userData:
         name: master-user-data-managed
 ```
-<1> replace new-cp-2 with the name of the new BareMetalHost created for the new node
+<1> replace `new-controlplane-machine` with the name of the new machine (which can be the machine name deleted previously)
 <2> replace bmtest-extpr with the `CLUSTER-API-CLUSTER` value shown in the previous step for the other control plane machines
-<3> replace `new-controlplane-machine` with the name of the machine to be created.  This be similar to the names shown in the previous step.
-<4> put the providerID value shown in the output of step 1 for the the new baremetal host here
+<3> put the providerID value shown in the output of step 1 for the the new baremetal host here
 +
 .. The following warning is expected:
 +
