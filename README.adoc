@@ -476,31 +476,31 @@ oc get node -l node-role.kubernetes.io/control-plane -ojson | jq -r '.items[] | 
 . Set bmh poweredOn
 +
 ```
-oc patch bmh $NEW_NODE_NAME --subresource status --type json -p '[{"op":"replace","path":"/status/poweredOn","value":true}]'
+oc patch -n openshift-machine-api bmh $NEW_NODE_NAME --subresource status --type json -p '[{"op":"replace","path":"/status/poweredOn","value":true}]'
 ```
 
 . Review bmh poweredOn status
 +
 ```
-oc get bmh -ojson | jq -r '.items[] | .metadata.name + "   PoweredOn:" +  (.status.poweredOn | tostring)'
+oc get bmh -n openshift-machine-api -ojson | jq -r '.items[] | .metadata.name + "   PoweredOn:" +  (.status.poweredOn | tostring)'
 ```
 
 . Review the bmh provisioning state
 +
 ```
-oc get bmh -ojson | jq -r '.items[] | .metadata.name + "   ProvsioningState:" +  .status.provisioning.state'
+oc get bmh -n openshift-machine-api -ojson | jq -r '.items[] | .metadata.name + "   ProvsioningState:" +  .status.provisioning.state'
 ```
 
 . Change the provisioning (state if necessary)
 +
 ```
-oc patch bmh $NEW_NODE_NAME --subresource status --type json -p '[{"op":"replace","path":"/status/provisioning/state","value":"unmanaged"}]'
+oc patch -n openshift-machine-api bmh $NEW_NODE_NAME --subresource status --type json -p '[{"op":"replace","path":"/status/provisioning/state","value":"unmanaged"}]'
 ```
 
 . Set the machine provisioned state
 +
 ```
-oc  patch machines $NEW_MACHINE_NAME -n openshift-machine-api --subresource status --type json -p '[{"op":"replace","path":"/status/phase","value":"Provisioned"}]'
+oc  patch -n openshift-machine-api machines $NEW_MACHINE_NAME -n openshift-machine-api --subresource status --type json -p '[{"op":"replace","path":"/status/phase","value":"Provisioned"}]'
 ```
 
 === Add The New Etcd Member ( new )
