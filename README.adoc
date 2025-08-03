@@ -449,7 +449,7 @@ NEW_MACHINE_NAME=new-machine <2>
 +
 ```
 BMH_UID=$(oc get bmh $NEW_NODE_NAME -ojson | jq -r .metadata.uid)
-echo %BMH_UID
+echo $BMH_UID
 ```
 
 .. Patch consumerRef object into baremetal host
