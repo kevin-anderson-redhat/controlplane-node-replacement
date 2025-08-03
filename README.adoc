@@ -424,8 +424,7 @@ spec:
 <1> replace new-cp-2 with the name of the new BareMetalHost created for the new node
 <2> replace bmtest-extpr with the `CLUSTER-API-CLUSTER` value shown in the previous step for the other control plane machines
 <3> replace `new-controlplane-machine` with the name of the machine to be created.  This be similar to the names shown in the previous step.
-<4> put the name of the new baremetal host here
-<5> put the uid of the new baremetal host here
+<4> put the providerID value shown in the output of step 1 for the the new baremetal host here
 +
 .. The following warning is expected:
 +
