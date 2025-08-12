@@ -187,7 +187,7 @@ baremetal   4.18.0    True        False         False      3d15h
 . Save the affected BareMetalHost object to a file for later use by running the following command
 +
 ```
-oc get -n openshift-machine-api bmh <node_name>  >bmh_affected.yaml <1>
+oc get -n openshift-machine-api bmh <node_name> -oyaml >bmh_affected.yaml <1>
 ```
 <1> replace `<node_name>` with the name of the affected node (which normally matches the associate bmh name).
 
@@ -298,6 +298,11 @@ spec:
   userData:
     name: master-user-data-managed
     namespace: openshift-machine-api
+```
+. Create the BareMetalHost
++
+```
+oc create -f bmh_affected.yaml
 ```
 
 .. The following warning is expected upon creation of the BareMetalHost
@@ -448,14 +453,14 @@ NEW_MACHINE_NAME=new-machine <2>
 .. Define the BMH_UID by using the following command to extract it from the new node's bmh
 +
 ```
-BMH_UID=$(oc get bmh $NEW_NODE_NAME -ojson | jq -r .metadata.uid)
+BMH_UID=$(oc get -n openshift-machine-api bmh $NEW_NODE_NAME -ojson | jq -r .metadata.uid)
 echo $BMH_UID
 ```
 
 .. Patch consumerRef object into baremetal host
 +
 ```
-oc patch bmh $NEW_NODE_NAME --type merge --patch '{"spec":{"consumerRef":{"apiVersion":"machine.openshift.io/v1beta1","kind":"Machine","name":"'$NEW_MACHINE_NAME'","namespace":"openshift-machine-api"}}}'
+oc patch -n openshift-machine-api bmh $NEW_NODE_NAME --type merge --patch '{"spec":{"consumerRef":{"apiVersion":"machine.openshift.io/v1beta1","kind":"Machine","name":"'$NEW_MACHINE_NAME'","namespace":"openshift-machine-api"}}}'
 ```
 
 .. Patch providerID into the new node
@@ -515,7 +520,7 @@ oc get nodes -owide -l node-role.kubernetes.io/control-plane
 .. List the etcd pods
 +
 ```
-oc -n openshift-etcd get pods -l k8s-app=etcd -o wide
+oc get -n openshift-etcd pods -l k8s-app=etcd -o wide
 ```
 
 .. rsh into one of the `Running` etcd pods.  The etcd pod on the new node should be `CrashLoopBackOff`.
